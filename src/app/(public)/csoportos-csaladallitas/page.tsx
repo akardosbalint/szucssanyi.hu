@@ -5,9 +5,11 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TestimonialCard } from "@/components/ui/TestimonialCard";
 import { formatHUF, formatDate, formatTime } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
-import { getEventSpotsLeft } from "@/lib/events";
+import { DUMMY_EVENTS, getDummyEventSpotsLeft } from "@/lib/dummy-events";
 import { MapPin, Users } from "lucide-react";
+
+// IDEIGLENES (bemutatási céllal): az esemény-lista jelenleg beépített
+// minta-adat, nem adatbázisból jön — lásd src/lib/dummy-events.ts.
 
 export const metadata: Metadata = {
   title: "Csoportos családállítás",
@@ -31,18 +33,14 @@ const TESTIMONIALS = [
 export default async function FamilyConstellationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ hiba?: string; fizetes?: string }>;
+  searchParams: Promise<{ hiba?: string }>;
 }) {
-  const { hiba, fizetes } = await searchParams;
+  const { hiba } = await searchParams;
 
-  const events = await prisma.event.findMany({
-    where: { active: true, startTime: { gte: new Date() } },
-    orderBy: { startTime: "asc" },
-  });
-
-  const eventsWithSpots = await Promise.all(
-    events.map(async (event) => ({ event, spotsLeft: await getEventSpotsLeft(event.id) })),
-  );
+  const eventsWithSpots = DUMMY_EVENTS.map((event) => ({
+    event,
+    spotsLeft: getDummyEventSpotsLeft(event),
+  }));
 
   return (
     <>
@@ -76,12 +74,6 @@ export default async function FamilyConstellationPage({
         {hiba === "betelt" ? (
           <p className="mx-auto mt-6 max-w-md rounded-xl bg-red-50 px-4 py-3 text-center text-sm text-red-700">
             Sajnos ez az alkalom időközben betelt.
-          </p>
-        ) : null}
-        {fizetes === "nem-elerheto" ? (
-          <p className="mx-auto mt-6 max-w-md rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
-            A fizetés jelenleg beüzemelés alatt áll — írj nekünk a kapcsolat
-            oldalon, és személyesen intézzük a jelentkezésed.
           </p>
         ) : null}
 

@@ -16,11 +16,18 @@ export async function subscribeLeadAction(formData: FormData) {
 
   const { name, email } = parsed.data;
 
-  await prisma.leadSubscriber.upsert({
-    where: { email: email.toLowerCase().trim() },
-    update: { name },
-    create: { name, email: email.toLowerCase().trim(), source: "ingyenes_meditacio" },
-  });
+  // IDEIGLENES (bemutatási céllal): amíg nincs éles adatbázis bekötve, a
+  // feliratkozást nem próbáljuk elmenteni — csak a sikeres visszajelzést
+  // mutatjuk. Ha az adatbázis élesben elérhető, ez az ág visszaállítható.
+  try {
+    await prisma.leadSubscriber.upsert({
+      where: { email: email.toLowerCase().trim() },
+      update: { name },
+      create: { name, email: email.toLowerCase().trim(), source: "ingyenes_meditacio" },
+    });
+  } catch {
+    // adatbázis nélkül is sikeresként kezeljük a bemutató kedvéért
+  }
 
   // TODO: ha lesz MAILERLITE_API_KEY, itt szinkronizáljuk a feliratkozót
   // a MailerLite listájával, és onnan megy ki az automatikus e-mail a

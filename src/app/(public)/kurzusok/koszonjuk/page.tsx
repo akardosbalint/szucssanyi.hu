@@ -12,9 +12,39 @@ export const metadata: Metadata = {
 export default async function CourseThankYouPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{
+    session_id?: string;
+    dummy?: string;
+    kurzus?: string;
+    cim?: string;
+    nev?: string;
+  }>;
 }) {
-  const { session_id: sessionId } = await searchParams;
+  const { session_id: sessionId, dummy, kurzus, cim, nev } = await searchParams;
+
+  // IDEIGLENES (bemutatási céllal): a kurzus-vásárlás jelenleg adatbázis
+  // és Stripe nélkül működik — lásd src/actions/courses-dummy.ts.
+  if (dummy === "1") {
+    return (
+      <Section variant="muted" narrow className="pt-20 sm:pt-28 text-center">
+        <CheckCircle2 className="mx-auto h-14 w-14 text-primary-600" strokeWidth={1.5} />
+        <h1 className="mt-6 font-heading text-2xl font-bold text-primary-950 sm:text-3xl">
+          Sikeres vásárlás — {cim}
+        </h1>
+        <p className="mt-3 text-neutral-600">
+          {nev ? `Köszönjük, ${nev}! ` : ""}Visszaigazoló e-mailt küldtünk a
+          hozzáférési linkeddel. A kurzus azonnal elérhető.
+        </p>
+        <Button
+          href={`/kurzusok/hozzaferes/demo/${kurzus}${nev ? `?nev=${encodeURIComponent(nev)}` : ""}`}
+          size="lg"
+          className="mt-6"
+        >
+          Ugrás a kurzushoz
+        </Button>
+      </Section>
+    );
+  }
 
   const payment = sessionId
     ? await prisma.payment.findUnique({

@@ -17,7 +17,14 @@ export async function sendContactMessageAction(formData: FormData) {
 
   const { name, email, message } = parsed.data;
 
-  await prisma.contactMessage.create({ data: { name, email, message } });
+  // IDEIGLENES (bemutatási céllal): amíg nincs éles adatbázis bekötve, az
+  // üzenetet nem próbáljuk elmenteni — csak a sikeres visszajelzést
+  // mutatjuk. Ha az adatbázis élesben elérhető, ez az él visszaállítható.
+  try {
+    await prisma.contactMessage.create({ data: { name, email, message } });
+  } catch {
+    // adatbázis nélkül is sikeresként kezeljük a bemutató kedvéért
+  }
 
   // TODO: MAILERLITE_API_KEY beállítása esetén itt lehet szinkronizálni /
   // értesítő e-mailt küldeni az adminnak (lásd .env.example, src/lib/email.ts).

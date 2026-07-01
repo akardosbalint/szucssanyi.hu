@@ -4,9 +4,12 @@ import { Section } from "@/components/ui/Section";
 import { Badge } from "@/components/ui/Badge";
 import { FaqAccordion } from "@/components/ui/FaqAccordion";
 import { formatHUF } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
-import { purchaseCourseAction } from "@/actions/courses";
+import { getDummyCourseBySlug } from "@/lib/dummy-courses";
+import { purchaseDummyCourseAction } from "@/actions/courses-dummy";
 import { Clock, PlayCircle } from "lucide-react";
+
+// IDEIGLENES (bemutatási céllal): a kurzus-adatok beépített minta-adatok,
+// nem adatbázisból jönnek — lásd src/lib/dummy-courses.ts.
 
 const COURSE_FAQ = [
   {
@@ -31,7 +34,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const course = await prisma.course.findUnique({ where: { slug } });
+  const course = getDummyCourseBySlug(slug);
   if (!course) return {};
   return {
     title: course.title,
@@ -39,22 +42,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function CourseDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fizetes?: string }>;
-}) {
+export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { fizetes } = await searchParams;
 
-  const course = await prisma.course.findUnique({
-    where: { slug },
-    include: { modules: { orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" } } } } },
-  });
+  const course = getDummyCourseBySlug(slug);
 
-  if (!course || !course.active) notFound();
+  if (!course) notFound();
 
   return (
     <>
@@ -68,15 +61,8 @@ export default async function CourseDetailPage({
           {formatHUF(course.priceHUF)}
         </p>
 
-        {fizetes === "nem-elerheto" ? (
-          <p className="mt-4 max-w-md rounded-lg bg-white/10 px-4 py-3 text-sm text-primary-100">
-            A fizetés jelenleg beüzemelés alatt áll — írj nekünk a kapcsolat
-            oldalon, és személyesen intézzük a hozzáférésed.
-          </p>
-        ) : null}
-
-        <form action={purchaseCourseAction} className="mt-6">
-          <input type="hidden" name="courseId" value={course.id} />
+        <form action={purchaseDummyCourseAction} className="mt-6">
+          <input type="hidden" name="courseSlug" value={course.slug} />
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
               type="text"

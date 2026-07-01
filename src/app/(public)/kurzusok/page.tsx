@@ -4,11 +4,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatHUF } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
+import { DUMMY_COURSES } from "@/lib/dummy-courses";
 
-// Élő adatbázis-adaton (kurzuslista) alapul, ami admin panelből bármikor
-// változhat — ne generálja statikusan build időben.
-export const dynamic = "force-dynamic";
+// IDEIGLENES (bemutatási céllal): a kurzuslista jelenleg beépített
+// minta-adat, nem adatbázisból jön — lásd src/lib/dummy-courses.ts.
 
 export const metadata: Metadata = {
   title: "Kurzusok",
@@ -16,11 +15,8 @@ export const metadata: Metadata = {
     "Önismereti online kurzusok Szűcs Sándortól: hiperérzékenység, egészséges párkapcsolat, önuralom. Egyszeri ár, örökös hozzáférés.",
 };
 
-export default async function CoursesPage() {
-  const courses = await prisma.course.findMany({
-    where: { active: true },
-    orderBy: { order: "asc" },
-  });
+export default function CoursesPage() {
+  const courses = DUMMY_COURSES;
 
   return (
     <>

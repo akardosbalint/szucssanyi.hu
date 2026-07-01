@@ -5,6 +5,54 @@ holisztikus önismereti mentor számára: publikus tartalmi oldalak, önkiszolg�
 időpontfoglalás fizetéssel, és egy admin panel a naptár/foglalások/kurzusok
 kezeléséhez.
 
+## Bemutató ("dummy") mód — a publikus oldal jelenlegi állapota
+
+Amíg nincs éles adatbázis/Stripe bekötve a production környezetbe, **a teljes
+publikus oldal adatbázis és Stripe nélkül, önmagában is tökéletesen működik**
+— ez szándékos, bemutatási céllal készült átmeneti állapot, nem hiba. Érintett
+funkciók: Konzultáció/időpontfoglalás, Kurzusok (vásárlás + hozzáférés),
+Csoportos családállítás (jelentkezés), Kapcsolat form, Ingyenes meditáció
+feliratkozás. Ezekben a folyamatokban valós fizetés és e-mail-küldés helyett
+azonnali, beépített minta-adatokkal működő visszaigazolás jelenik meg.
+
+Az **admin panel** (`/admin/*`) ettől függetlenül **valós adatbázis-kapcsolatot
+igényel** — ez szándékosan nem lett dummyzva, mivel az admin CRUD funkciók
+valós, perzisztens adatot feltételeznek.
+
+Elnevezési konvenció, ami alapján a dummy-kód megkülönböztethető a valósitól:
+
+- `src/lib/dummy-*.ts` — beépített minta-adat modulok (szakemberek, kurzusok,
+  események), amik a Prisma lekérdezéseket helyettesítik a publikus oldalakon.
+- `src/actions/*-dummy.ts` — egyszerűsített Server Action-ök, amik a
+  beküldött adatot URL query paraméterekben kódolva a megfelelő "köszönjük"
+  oldalra irányítanak (nincs adatbázis-írás, nincs megosztott, memóriában
+  tárolt állapot — ez fontos, mert Vercel serverless környezetben a memória
+  nem perzisztens hívások között).
+- A megosztott "köszönjük" oldalakon (`.../koszonjuk/page.tsx`) egy `dummy=1`
+  query paraméter dönti el, hogy a dummy ág (query paraméterekből olvasott
+  adatok) vagy az eredeti, Stripe `session_id`-alapú, valós ág fusson.
+
+**A valós, adatbázis/Stripe-alapú kód nem lett törölve** — minden eredeti
+Server Action és oldal-variáns megmaradt, csak jelenleg nincs bekötve a
+publikus felületre:
+
+- `src/actions/booking.ts`, `src/actions/events.ts`, `src/actions/courses.ts`
+  — az eredeti, Prisma/Stripe-alapú foglalás/jelentkezés/vásárlás logika.
+- `src/app/(public)/foglalas/[token]`,
+  `src/app/(public)/csoportos-csaladallitas/kezeles/[token]`,
+  `src/app/(public)/kurzusok/hozzaferes/[token]` — tokenes, adatbázis-alapú
+  kezelő/hozzáférési oldalak (ezek admin által létrehozott, valós
+  foglalásokhoz még mindig működnek, és a `cancelBookingAction`/
+  `cancelEventRegistrationAction` aktívan használt belőlük).
+
+**Visszaállás valós működésre**: miután a production adatbázis (pl. Supabase)
+be van kötve és a Stripe kulcsok be vannak állítva, a dummy oldalakon az
+importokat vissza kell cserélni az eredeti akciókra/lekérdezésekre (pl.
+`createDummyBookingAction` → `createBookingAction`, `DUMMY_PRACTITIONERS` →
+`prisma.practitioner.findMany()`), és a `contact.ts`/`leads.ts` try/catch
+"néma hiba" ágait el kell távolítani, hogy a valós adatbázis-hiba ismét
+látható legyen hibaként, ne néma sikerként.
+
 ## Fejlesztői környezet beállítása
 
 1. **Függőségek telepítése**
@@ -133,6 +181,10 @@ Ezek a rendszer TODO/placeholder pontjai — kódban is jelölve, itt
 
 ## Ismert korlátok / amit érdemes tudni élesítés előtt
 
+- **Bemutató (dummy) mód**: lásd fent — a publikus oldal jelenleg szándékosan
+  adatbázis/Stripe nélkül működik, csak bemutatási céllal. Élesítés előtt ezt
+  vissza kell kapcsolni a valós adatbázis-/Stripe-alapú kódra (lásd fent a
+  visszaállási lépéseket).
 - **Tartalom**: a szakember-fotók, oklevelek, valós vélemények és a "Rólam"
   oldal hitelesítő adatai jelenleg minta/placeholder tartalmak — ezeket
   Sanyinak kell valós anyagra cserélnie (admin panel: Szakemberek; kód:
@@ -161,11 +213,12 @@ Ezek a rendszer TODO/placeholder pontjai — kódban is jelölve, itt
 ## Verifikáció (elvégezve ebben a fejlesztési menetben)
 
 - `npm run lint`, `npm run build`, `npm test` — mind zöld.
-- Böngészős, végponttól végpontig tesztelve (Playwright): teljes foglalási
-  folyamat (szakember → szolgáltatás → naptár → adatok → Stripe-hiány esetén
-  graceful üzenet), foglalás lemondása egyedi linkről, csoportos
-  családállítás jelentkezés + lemondás, kurzusvásárlás form, ingyenes
-  meditáció feliratkozás, kapcsolat form.
+- Böngészős, végponttól végpontig tesztelve (Playwright), **adatbázis és
+  Stripe teljes hiányában** (a dummy mód célja szerint): teljes foglalási
+  folyamat (szakember → szolgáltatás → naptár → adatok → azonnali dummy
+  visszaigazolás), kurzusvásárlás + hozzáférési oldal, csoportos
+  családállítás jelentkezés, ingyenes meditáció feliratkozás, kapcsolat form
+  — mind sikeresen lefut `.env` és futó Postgres nélkül is.
 - Admin panel: bejelentkezés, szerepkör-alapú hozzáférés-korlátozás (a
   szakember nem éri el az admin-only oldalakat), kézi foglalás rögzítése
   azonnal blokkolja a publikus naptárat (nincs dupla foglalás), elérhetőség-
