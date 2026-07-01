@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { TestimonialCard } from "@/components/ui/TestimonialCard";
 import { formatHUF, formatDate, formatTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { getEventSpotsLeft } from "@/lib/events";
 import { MapPin, Users } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -27,12 +28,21 @@ const TESTIMONIALS = [
   },
 ];
 
-export default async function FamilyConstellationPage() {
+export default async function FamilyConstellationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ hiba?: string; fizetes?: string }>;
+}) {
+  const { hiba, fizetes } = await searchParams;
+
   const events = await prisma.event.findMany({
     where: { active: true, startTime: { gte: new Date() } },
     orderBy: { startTime: "asc" },
-    include: { _count: { select: { registrations: { where: { status: "CONFIRMED" } } } } },
   });
+
+  const eventsWithSpots = await Promise.all(
+    events.map(async (event) => ({ event, spotsLeft: await getEventSpotsLeft(event.id) })),
+  );
 
   return (
     <>
@@ -63,15 +73,26 @@ export default async function FamilyConstellationPage() {
           Következő alkalmak
         </h2>
 
+        {hiba === "betelt" ? (
+          <p className="mx-auto mt-6 max-w-md rounded-xl bg-red-50 px-4 py-3 text-center text-sm text-red-700">
+            Sajnos ez az alkalom időközben betelt.
+          </p>
+        ) : null}
+        {fizetes === "nem-elerheto" ? (
+          <p className="mx-auto mt-6 max-w-md rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+            A fizetés jelenleg beüzemelés alatt áll — írj nekünk a kapcsolat
+            oldalon, és személyesen intézzük a jelentkezésed.
+          </p>
+        ) : null}
+
         <div className="mt-10 space-y-6">
-          {events.length === 0 ? (
+          {eventsWithSpots.length === 0 ? (
             <Card className="text-center text-neutral-600">
               Jelenleg nincs meghirdetett alkalom — írj a kapcsolat oldalon, és
               értesítünk, amint lesz.
             </Card>
           ) : (
-            events.map((event) => {
-              const spotsLeft = event.capacity - event._count.registrations;
+            eventsWithSpots.map(({ event, spotsLeft }) => {
               return (
                 <Card key={event.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
