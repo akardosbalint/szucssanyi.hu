@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth / staff
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  PRACTITIONER
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  passwordHash  String
+  name          String
+  role          Role
+  practitioner  Practitioner?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Practitioners & services (Konzultáció)
+// ---------------------------------------------------------------------------
+
+model Practitioner {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  name         String
+  title        String?
+  photoUrl     String?
+  bio          String
+  active       Boolean       @default(true)
+  order        Int           @default(0)
+  userId       String?       @unique
+  user         User?         @relation(fields: [userId], references: [id])
+  services     Service[]
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+  bookings     Booking[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+enum ServiceMode {
+  ONLINE
+  IN_PERSON
+}
+
+model Service {
+  id              String       @id @default(cuid())
+  practitionerId  String
+  practitioner    Practitioner @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  name            String
+  mode            ServiceMode
+  durationMinutes Int
+  priceHUF        Int
+  active          Boolean      @default(true)
+  order           Int          @default(0)
+  bookings        Booking[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+// Recurring weekly availability, e.g. Monday 09:00-15:00
+model AvailabilityRule {
+  id             String       @id @default(cuid())
+  practitionerId String
+  practitioner   Practitioner @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  weekday        Int // 0 = Sunday .. 6 = Saturday
+  startTime      String // "09:00"
+  endTime        String // "15:00"
+  createdAt      DateTime     @default(now())
+}
+
+enum ExceptionType {
+  CLOSED
+  CUSTOM_HOURS
+}
+
+// One-off override for a specific date (day off, or custom hours)
+model AvailabilityException {
+  id             String        @id @default(cuid())
+  practitionerId String
+  practitioner   Practitioner  @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  date           DateTime      @db.Date
+  type           ExceptionType
+  startTime      String?
+  endTime        String?
+  createdAt      DateTime      @default(now())
+
+  @@unique([practitionerId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Bookings (1:1 consultation)
+// ---------------------------------------------------------------------------
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Booking {
+  id                String        @id @default(cuid())
+  practitionerId    String
+  practitioner      Practitioner  @relation(fields: [practitionerId], references: [id])
+  serviceId         String
+  service           Service       @relation(fields: [serviceId], references: [id])
+  customerName      String
+  customerEmail     String
+  customerPhone     String
+  note              String?
+  startTime         DateTime
+  endTime           DateTime
+  status            BookingStatus @default(PENDING_PAYMENT)
+  holdExpiresAt     DateTime?
+  manageToken       String        @unique
+  reminderSentAt    DateTime?
+  payment           Payment?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([practitionerId, startTime])
+  @@index([status, holdExpiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Group constellation events (Csoportos családállítás)
+// ---------------------------------------------------------------------------
+
+model Event {
+  id            String             @id @default(cuid())
+  slug          String             @unique
+  title         String
+  description   String
+  location      String
+  startTime     DateTime
+  endTime       DateTime
+  capacity      Int
+  priceHUF      Int
+  active        Boolean            @default(true)
+  registrations EventRegistration[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model EventRegistration {
+  id             String        @id @default(cuid())
+  eventId        String
+  event          Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  customerName   String
+  customerEmail  String
+  customerPhone  String
+  note           String?
+  status         BookingStatus @default(PENDING_PAYMENT)
+  holdExpiresAt  DateTime?
+  manageToken    String        @unique
+  payment        Payment?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([eventId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Courses
+// ---------------------------------------------------------------------------
+
+model Course {
+  id            String         @id @default(cuid())
+  slug          String         @unique
+  title         String
+  shortPromise  String
+  priceHUF      Int
+  active        Boolean        @default(true)
+  order         Int            @default(0)
+  heroImageUrl  String?
+  description   String
+  modules       CourseModule[]
+  purchases     CoursePurchase[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model CourseModule {
+  id        String        @id @default(cuid())
+  courseId  String
+  course    Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int           @default(0)
+  lessons   CourseLesson[]
+}
+
+model CourseLesson {
+  id             String       @id @default(cuid())
+  moduleId       String
+  module         CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title          String
+  durationMinutes Int?
+  videoUrl       String? // TODO: valós videó URL az adminban pótlandó
+  order          Int          @default(0)
+}
+
+model CoursePurchase {
+  id            String        @id @default(cuid())
+  courseId      String
+  course        Course        @relation(fields: [courseId], references: [id])
+  customerName  String
+  customerEmail String
+  status        BookingStatus @default(PENDING_PAYMENT)
+  accessToken   String        @unique
+  payment       Payment?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([customerEmail])
+}
+
+// ---------------------------------------------------------------------------
+// Payments (Stripe)
+// ---------------------------------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                    String         @id @default(cuid())
+  stripeCheckoutSessionId String       @unique
+  stripePaymentIntentId  String?
+  amountHUF             Int
+  status                PaymentStatus  @default(PENDING)
+
+  bookingId             String?        @unique
+  booking               Booking?       @relation(fields: [bookingId], references: [id])
+  eventRegistrationId   String?        @unique
+  eventRegistration     EventRegistration? @relation(fields: [eventRegistrationId], references: [id])
+  coursePurchaseId      String?        @unique
+  coursePurchase        CoursePurchase? @relation(fields: [coursePurchaseId], references: [id])
+
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Leads / contact (own storage now, MailerLite sync later)
+// ---------------------------------------------------------------------------
+
+model LeadSubscriber {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  source    String   @default("ingyenes_meditacio")
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

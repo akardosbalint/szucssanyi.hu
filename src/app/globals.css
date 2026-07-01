@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1c2530;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-manrope);
+
+  /* Steel blue — trust, calm. Primary brand color. */
+  --color-primary-50: #f4f7fa;
+  --color-primary-100: #e6ecf2;
+  --color-primary-200: #cbd9e5;
+  --color-primary-300: #a8bece;
+  --color-primary-400: #7f9ab3;
+  --color-primary-500: #5b7a9d;
+  --color-primary-600: #4a6584;
+  --color-primary-700: #3c5169;
+  --color-primary-800: #2f4053;
+  --color-primary-900: #26333f;
+  --color-primary-950: #171e26;
+
+  /* Coral/orange — reserved exclusively for CTAs. */
+  --color-accent-50: #fff4ed;
+  --color-accent-100: #ffe4d1;
+  --color-accent-200: #ffc7a3;
+  --color-accent-300: #ffa06b;
+  --color-accent-400: #ff8142;
+  --color-accent-500: #f2691f;
+  --color-accent-600: #d9530f;
+  --color-accent-700: #b5400c;
+  --color-accent-800: #8f350f;
+  --color-accent-900: #742d10;
+
+  /* Neutral warm grays for content backgrounds. */
+  --color-neutral-50: #faf9f7;
+  --color-neutral-100: #f2f0ec;
+  --color-neutral-200: #e5e2db;
+  --color-neutral-300: #d1ccc0;
+  --color-neutral-400: #a49d8d;
+  --color-neutral-500: #7a7364;
+  --color-neutral-600: #5c564a;
+  --color-neutral-700: #453f36;
+  --color-neutral-800: #302b25;
+  --color-neutral-900: #1c1916;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
