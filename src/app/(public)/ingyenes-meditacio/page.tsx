@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Section } from "@/components/ui/Section";
+import { Badge } from "@/components/ui/Badge";
 import { subscribeLeadAction } from "@/actions/leads";
 
 export const metadata: Metadata = {
@@ -15,11 +17,12 @@ export default async function FreeMeditationPage({
   const { hiba } = await searchParams;
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
+    <Section variant="muted" className="pt-20 sm:pt-28">
       <div className="grid items-center gap-10 sm:grid-cols-2">
         <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary-100 to-primary-300" />
         <div>
-          <h1 className="font-heading text-3xl font-bold leading-tight text-primary-950 sm:text-4xl">
+          <Badge>Ingyenes meditáció</Badge>
+          <h1 className="mt-6 font-heading text-3xl font-bold leading-tight text-primary-950 sm:text-4xl">
             Egy vezetett meditáció, ami visszarepít a sérült gyermeki
             részedhez
           </h1>
@@ -34,14 +37,14 @@ export default async function FreeMeditationPage({
               name="name"
               required
               placeholder="Keresztnév"
-              className="rounded-full border border-neutral-300 px-5 py-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              className="rounded-full border border-neutral-300 bg-white px-5 py-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
             <input
               type="email"
               name="email"
               required
               placeholder="E-mail cím"
-              className="rounded-full border border-neutral-300 px-5 py-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              className="rounded-full border border-neutral-300 bg-white px-5 py-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
             <button
               type="submit"
@@ -64,6 +67,6 @@ export default async function FreeMeditationPage({
           </p>
         </div>
       </div>
-    </div>
+    </Section>
   );
 }
