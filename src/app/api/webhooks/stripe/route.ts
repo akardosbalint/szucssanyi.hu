@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
+import { formatDateTime } from "@/lib/format";
+import {
+  sendBookingConfirmationEmail,
+  sendPractitionerNewBookingEmail,
+  sendEventRegistrationConfirmationEmail,
+  sendCoursePurchaseEmail,
+} from "@/lib/email";
 
 export const runtime = "nodejs";
+
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 async function markPaymentSucceeded(session: Stripe.Checkout.Session) {
   const payment = await prisma.payment.findUnique({ where: { stripeCheckoutSessionId: session.id } });
@@ -21,20 +30,57 @@ async function markPaymentSucceeded(session: Stripe.Checkout.Session) {
   const kind = session.metadata?.kind;
 
   if (kind === "booking" && payment.bookingId) {
-    await prisma.booking.update({ where: { id: payment.bookingId }, data: { status: "CONFIRMED" } });
-    // TODO (Fázis 6): visszaigazoló e-mail kiküldése a kliensnek és a szakembernek.
+    const booking = await prisma.booking.update({
+      where: { id: payment.bookingId },
+      data: { status: "CONFIRMED" },
+      include: { practitioner: { include: { user: true } }, service: true },
+    });
+
+    await sendBookingConfirmationEmail({
+      customerEmail: booking.customerEmail,
+      customerName: booking.customerName,
+      practitionerName: booking.practitioner.name,
+      serviceName: booking.service.name,
+      startTimeFormatted: formatDateTime(booking.startTime),
+      manageUrl: `${siteUrl()}/foglalas/${booking.manageToken}`,
+    });
+
+    if (booking.practitioner.user?.email) {
+      await sendPractitionerNewBookingEmail({
+        practitionerEmail: booking.practitioner.user.email,
+        customerName: booking.customerName,
+        serviceName: booking.service.name,
+        startTimeFormatted: formatDateTime(booking.startTime),
+      });
+    }
   } else if (kind === "event_registration" && payment.eventRegistrationId) {
-    await prisma.eventRegistration.update({
+    const registration = await prisma.eventRegistration.update({
       where: { id: payment.eventRegistrationId },
       data: { status: "CONFIRMED" },
+      include: { event: true },
     });
-    // TODO (Fázis 6): visszaigazoló e-mail kiküldése.
+
+    await sendEventRegistrationConfirmationEmail({
+      customerEmail: registration.customerEmail,
+      customerName: registration.customerName,
+      eventTitle: registration.event.title,
+      startTimeFormatted: formatDateTime(registration.event.startTime),
+      location: registration.event.location,
+      manageUrl: `${siteUrl()}/csoportos-csaladallitas/kezeles/${registration.manageToken}`,
+    });
   } else if (kind === "course_purchase" && payment.coursePurchaseId) {
-    await prisma.coursePurchase.update({
+    const purchase = await prisma.coursePurchase.update({
       where: { id: payment.coursePurchaseId },
       data: { status: "CONFIRMED" },
+      include: { course: true },
     });
-    // TODO (Fázis 6): hozzáférési link e-mailben történő kiküldése.
+
+    await sendCoursePurchaseEmail({
+      customerEmail: purchase.customerEmail,
+      customerName: purchase.customerName,
+      courseTitle: purchase.course.title,
+      accessUrl: `${siteUrl()}/kurzusok/hozzaferes/${purchase.accessToken}`,
+    });
   }
 }
 

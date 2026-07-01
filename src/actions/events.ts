@@ -8,6 +8,8 @@ import { getEventSpotsLeft } from "@/lib/events";
 import { HOLD_DURATION_MINUTES, CANCELLATION_CUTOFF_HOURS } from "@/lib/booking";
 import { eventRegistrationSchema } from "@/lib/validations/event-registration";
 import { createEventRegistrationCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { sendEventRegistrationCancellationEmail } from "@/lib/email";
+import { formatDateTime } from "@/lib/format";
 
 export async function registerForEventAction(formData: FormData) {
   const parsed = eventRegistrationSchema.safeParse({
@@ -85,6 +87,13 @@ export async function cancelEventRegistrationAction(manageToken: string) {
   await prisma.eventRegistration.update({
     where: { id: registration.id },
     data: { status: "CANCELLED" },
+  });
+
+  await sendEventRegistrationCancellationEmail({
+    customerEmail: registration.customerEmail,
+    customerName: registration.customerName,
+    eventTitle: registration.event.title,
+    startTimeFormatted: formatDateTime(registration.event.startTime),
   });
 
   return { ok: true, message: "A jelentkezésed sikeresen lemondva." };

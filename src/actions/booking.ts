@@ -12,6 +12,8 @@ import {
 } from "@/lib/booking";
 import { bookingDetailsSchema } from "@/lib/validations/booking";
 import { createBookingCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { sendBookingCancellationEmail } from "@/lib/email";
+import { formatDateTime } from "@/lib/format";
 
 export async function getSlotsForDayAction(input: {
   practitionerId: string;
@@ -104,7 +106,10 @@ export async function createBookingAction(formData: FormData) {
 }
 
 export async function cancelBookingAction(manageToken: string) {
-  const booking = await prisma.booking.findUnique({ where: { manageToken } });
+  const booking = await prisma.booking.findUnique({
+    where: { manageToken },
+    include: { service: true },
+  });
   if (!booking) return { ok: false, message: "A foglalás nem található." };
   if (booking.status === "CANCELLED") return { ok: false, message: "A foglalás már le van mondva." };
   if (booking.status === "COMPLETED") return { ok: false, message: "A foglalás már lezajlott." };
@@ -119,7 +124,12 @@ export async function cancelBookingAction(manageToken: string) {
 
   await prisma.booking.update({ where: { id: booking.id }, data: { status: "CANCELLED" } });
 
-  // TODO (Fázis 6): lemondás e-mail értesítés kiküldése a kliensnek és a szakembernek.
+  await sendBookingCancellationEmail({
+    customerEmail: booking.customerEmail,
+    customerName: booking.customerName,
+    serviceName: booking.service.name,
+    startTimeFormatted: formatDateTime(booking.startTime),
+  });
 
   return { ok: true, message: "A foglalásod sikeresen lemondva." };
 }

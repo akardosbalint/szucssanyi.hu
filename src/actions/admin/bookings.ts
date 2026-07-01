@@ -7,6 +7,8 @@ import { generateToken } from "@/lib/tokens";
 import { isSlotStillFree, TIME_ZONE } from "@/lib/booking";
 import { manualBookingSchema } from "@/lib/validations/admin-booking";
 import { requireStaff } from "@/lib/admin-guard";
+import { sendBookingCancellationEmail, sendBookingConfirmationEmail } from "@/lib/email";
+import { formatDateTime } from "@/lib/format";
 
 export async function createManualBookingAction(formData: FormData) {
   const session = await requireStaff();
@@ -45,7 +47,9 @@ export async function createManualBookingAction(formData: FormData) {
     return { ok: false, message: "Erre az időpontra már van foglalás." };
   }
 
-  await prisma.booking.create({
+  const manageToken = generateToken();
+
+  const booking = await prisma.booking.create({
     data: {
       practitionerId,
       serviceId,
@@ -56,8 +60,18 @@ export async function createManualBookingAction(formData: FormData) {
       startTime: start,
       endTime: end,
       status: "CONFIRMED",
-      manageToken: generateToken(),
+      manageToken,
     },
+    include: { practitioner: true },
+  });
+
+  await sendBookingConfirmationEmail({
+    customerEmail: booking.customerEmail,
+    customerName: booking.customerName,
+    practitionerName: booking.practitioner.name,
+    serviceName: service.name,
+    startTimeFormatted: formatDateTime(booking.startTime),
+    manageUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/foglalas/${manageToken}`,
   });
 
   revalidatePath("/admin/foglalasok");
@@ -69,7 +83,7 @@ export async function createManualBookingAction(formData: FormData) {
 export async function adminCancelBookingAction(bookingId: string) {
   const session = await requireStaff();
 
-  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { service: true } });
   if (!booking) return { ok: false, message: "A foglalás nem található." };
 
   if (session.user.role !== "ADMIN" && session.user.practitionerId !== booking.practitionerId) {
@@ -77,6 +91,13 @@ export async function adminCancelBookingAction(bookingId: string) {
   }
 
   await prisma.booking.update({ where: { id: bookingId }, data: { status: "CANCELLED" } });
+
+  await sendBookingCancellationEmail({
+    customerEmail: booking.customerEmail,
+    customerName: booking.customerName,
+    serviceName: booking.service.name,
+    startTimeFormatted: formatDateTime(booking.startTime),
+  });
 
   revalidatePath("/admin/foglalasok");
   revalidatePath("/admin");

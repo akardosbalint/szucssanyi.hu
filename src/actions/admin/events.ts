@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-guard";
 import { TIME_ZONE } from "@/lib/booking";
 import { eventSchema } from "@/lib/validations/admin-event";
+import { sendEventRegistrationCancellationEmail } from "@/lib/email";
+import { formatDateTime } from "@/lib/format";
 
 export async function createEventAction(formData: FormData) {
   await requireAdmin();
@@ -45,9 +47,18 @@ export async function toggleEventActiveAction(eventId: string) {
 
 export async function cancelEventRegistrationAdminAction(registrationId: string) {
   await requireAdmin();
-  await prisma.eventRegistration.update({
+  const registration = await prisma.eventRegistration.update({
     where: { id: registrationId },
     data: { status: "CANCELLED" },
+    include: { event: true },
   });
+
+  await sendEventRegistrationCancellationEmail({
+    customerEmail: registration.customerEmail,
+    customerName: registration.customerName,
+    eventTitle: registration.event.title,
+    startTimeFormatted: formatDateTime(registration.event.startTime),
+  });
+
   revalidatePath("/admin/esemenyek");
 }
