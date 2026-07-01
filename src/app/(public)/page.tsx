@@ -3,7 +3,6 @@ import Link from "next/link";
 import { HeartHandshake, Users, GraduationCap, ArrowRight } from "lucide-react";
 import { Section } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { TestimonialCard } from "@/components/ui/TestimonialCard";
 
@@ -78,8 +77,7 @@ export default function HomePage() {
   return (
     <>
       <Section variant="dark" className="pb-20 pt-20 sm:pt-28">
-        <Badge className="bg-white/10 text-white">Budapest · Önismereti mentorálás</Badge>
-        <h1 className="mt-6 max-w-2xl font-heading text-4xl font-bold leading-tight text-white sm:text-5xl">
+        <h1 className="max-w-2xl font-heading text-4xl font-bold leading-tight text-white sm:text-5xl">
           Segítek visszatalálni önmagadhoz, hogy tisztán láss, és nyugodtan merj dönteni.
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-primary-100">
