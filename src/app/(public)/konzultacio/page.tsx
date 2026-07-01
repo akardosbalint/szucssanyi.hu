@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { PersonAvatar } from "@/components/ui/PersonAvatar";
 import { FaqAccordion } from "@/components/ui/FaqAccordion";
 import { formatHUF } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
+import { DUMMY_PRACTITIONERS } from "@/lib/dummy-practitioners";
 import { HeartCrack, MessagesSquare, ShieldQuestion } from "lucide-react";
 
-// Élő adatbázis-adaton (szakemberek listája) alapul, ami admin panelből
-// bármikor változhat — ne generálja statikusan build időben.
-export const dynamic = "force-dynamic";
+// IDEIGLENES (bemutatási céllal): a szakember-lista jelenleg beépített
+// minta-adat, nem adatbázisból jön — lásd src/lib/dummy-practitioners.ts.
 
 export const metadata: Metadata = {
   title: "Konzultáció",
@@ -63,12 +62,8 @@ const FAQ_ITEMS = [
   },
 ];
 
-export default async function ConsultationPage() {
-  const practitioners = await prisma.practitioner.findMany({
-    where: { active: true },
-    orderBy: { order: "asc" },
-    include: { services: { where: { active: true }, orderBy: { order: "asc" } } },
-  });
+export default function ConsultationPage() {
+  const practitioners = DUMMY_PRACTITIONERS;
 
   return (
     <>

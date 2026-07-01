@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 import { formatHUF } from "@/lib/format";
-import { getSlotsForDayAction, createBookingAction } from "@/actions/booking";
+import { getDummySlotsForDay } from "@/lib/dummy-availability";
+import { createDummyBookingAction } from "@/actions/booking-dummy";
 
 type Service = {
   id: string;
@@ -14,12 +15,6 @@ type Service = {
   durationMinutes: number;
   priceHUF: number;
 };
-
-const timeFormatter = new Intl.DateTimeFormat("hu-HU", {
-  timeZone: "Europe/Budapest",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -31,18 +26,19 @@ function maxDateKey() {
   return d.toISOString().slice(0, 10);
 }
 
+// IDEIGLENES (bemutatási céllal): amíg nincs éles adatbázis/Stripe, ez a
+// wizard beépített minta-adatokkal, adatbázis-hívás nélkül működik — lásd
+// src/lib/dummy-availability.ts és src/actions/booking-dummy.ts.
 export function BookingWizard({
-  practitionerId,
+  practitionerSlug,
   services,
   initialServiceId,
   initialErrorMessage,
-  paymentUnavailable,
 }: {
-  practitionerId: string;
+  practitionerSlug: string;
   services: Service[];
   initialServiceId?: string;
   initialErrorMessage?: string;
-  paymentUnavailable?: boolean;
 }) {
   const [serviceId, setServiceId] = useState<string | null>(
     initialServiceId ?? (services.length === 1 ? services[0].id : null),
@@ -50,8 +46,6 @@ export function BookingWizard({
   const [dateKey, setDateKey] = useState<string>("");
   const [slots, setSlots] = useState<string[] | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   const selectedService = useMemo(
     () => services.find((s) => s.id === serviceId) ?? null,
@@ -68,18 +62,11 @@ export function BookingWizard({
   function handleDateChange(value: string) {
     setDateKey(value);
     setSelectedSlot(null);
-    setSlots(null);
-    setLoadError(null);
-    if (!value || !serviceId) return;
-
-    startTransition(async () => {
-      try {
-        const result = await getSlotsForDayAction({ practitionerId, serviceId, dateKey: value });
-        setSlots(result);
-      } catch {
-        setLoadError("Nem sikerült betölteni az időpontokat. Próbáld újra.");
-      }
-    });
+    if (!value || !serviceId || !selectedService) {
+      setSlots(null);
+      return;
+    }
+    setSlots(getDummySlotsForDay(practitionerSlug, selectedService.durationMinutes, value));
   }
 
   return (
@@ -87,13 +74,6 @@ export function BookingWizard({
       {initialErrorMessage ? (
         <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {initialErrorMessage}
-        </div>
-      ) : null}
-
-      {paymentUnavailable ? (
-        <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          A fizetés jelenleg beüzemelés alatt áll — írj nekünk a kapcsolat
-          oldalon, és személyesen egyeztetjük az időpontot.
         </div>
       ) : null}
 
@@ -146,13 +126,7 @@ export function BookingWizard({
           />
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {isPending ? (
-              <p className="flex items-center gap-2 text-sm text-neutral-500">
-                <Loader2 className="h-4 w-4 animate-spin" /> Időpontok betöltése...
-              </p>
-            ) : null}
-            {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
-            {!isPending && dateKey && slots?.length === 0 ? (
+            {dateKey && slots?.length === 0 ? (
               <p className="text-sm text-neutral-500">
                 Ezen a napon nincs szabad időpont — próbálj másik dátumot.
               </p>
@@ -169,7 +143,7 @@ export function BookingWizard({
                     : "border-neutral-300 text-primary-800 hover:border-primary-400",
                 )}
               >
-                {timeFormatter.format(new Date(slot))}
+                {slot}
               </button>
             ))}
           </div>
@@ -180,10 +154,10 @@ export function BookingWizard({
         <Card>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">3. lépés</p>
           <h2 className="mt-1 font-heading text-lg font-bold text-primary-950">Add meg az adataid</h2>
-          <form action={createBookingAction} className="mt-4 space-y-3">
-            <input type="hidden" name="practitionerId" value={practitionerId} />
+          <form action={createDummyBookingAction} className="mt-4 space-y-3">
+            <input type="hidden" name="practitionerSlug" value={practitionerSlug} />
             <input type="hidden" name="serviceId" value={selectedService.id} />
-            <input type="hidden" name="startTime" value={selectedSlot} />
+            <input type="hidden" name="startTime" value={`${dateKey} ${selectedSlot}`} />
             <div className="grid gap-3 sm:grid-cols-2">
               <input
                 type="text"
@@ -207,22 +181,15 @@ export function BookingWizard({
               placeholder="E-mail cím"
               className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
-            <textarea
-              name="note"
-              rows={3}
-              placeholder="Megjegyzés (opcionális)"
-              className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            />
             <p className="text-xs text-neutral-500">
-              Az időpontot {formatHUF(selectedService.priceHUF)} áron, a következő
-              lépésben biztonságos bankkártyás fizetéssel (Stripe) tudod
-              véglegesíteni. Fizetésig az időpontot 30 percig tartjuk fenn.
+              Az időpontot {formatHUF(selectedService.priceHUF)} áron véglegesítjük — a
+              foglalás elküldése után e-mailben visszaigazoljuk.
             </p>
             <button
               type="submit"
               className="w-full rounded-full bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-600"
             >
-              Tovább a fizetéshez
+              Foglalás véglegesítése
             </button>
           </form>
         </Card>

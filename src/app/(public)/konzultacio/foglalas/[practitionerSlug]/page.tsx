@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { Section } from "@/components/ui/Section";
 import { Badge } from "@/components/ui/Badge";
 import { PersonAvatar } from "@/components/ui/PersonAvatar";
-import { prisma } from "@/lib/prisma";
+import { getDummyPractitionerBySlug } from "@/lib/dummy-practitioners";
 import { BookingWizard } from "@/components/booking/BookingWizard";
 
+// IDEIGLENES (bemutatási céllal): a szakember-adatok beépített minta-adatok,
+// nem adatbázisból jönnek — lásd src/lib/dummy-practitioners.ts.
+
 const ERROR_MESSAGES: Record<string, string> = {
-  "idopont-mar-foglalt": "Sajnos ezt az időpontot közben más lefoglalta — válassz egy másikat.",
   "ervenytelen-adat": "Kérlek, ellenőrizd a megadott adatokat, és próbáld újra.",
   "nem-talalhato": "A kiválasztott szolgáltatás nem található.",
 };
@@ -18,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ practitionerSlug: string }>;
 }): Promise<Metadata> {
   const { practitionerSlug } = await params;
-  const practitioner = await prisma.practitioner.findUnique({ where: { slug: practitionerSlug } });
+  const practitioner = getDummyPractitionerBySlug(practitionerSlug);
   if (!practitioner) return {};
   return {
     title: `Időpontfoglalás — ${practitioner.name}`,
@@ -31,17 +33,14 @@ export default async function BookingPage({
   searchParams,
 }: {
   params: Promise<{ practitionerSlug: string }>;
-  searchParams: Promise<{ hiba?: string; fizetes?: string; szolgaltatas?: string }>;
+  searchParams: Promise<{ hiba?: string; szolgaltatas?: string }>;
 }) {
   const { practitionerSlug } = await params;
-  const { hiba, fizetes, szolgaltatas } = await searchParams;
+  const { hiba, szolgaltatas } = await searchParams;
 
-  const practitioner = await prisma.practitioner.findUnique({
-    where: { slug: practitionerSlug },
-    include: { services: { where: { active: true }, orderBy: { order: "asc" } } },
-  });
+  const practitioner = getDummyPractitionerBySlug(practitionerSlug);
 
-  if (!practitioner || !practitioner.active) notFound();
+  if (!practitioner) notFound();
 
   return (
     <Section variant="muted" className="pt-20 sm:pt-28">
@@ -58,11 +57,10 @@ export default async function BookingPage({
 
       <div className="mt-10 max-w-xl">
         <BookingWizard
-          practitionerId={practitioner.id}
+          practitionerSlug={practitioner.slug}
           services={practitioner.services}
           initialServiceId={szolgaltatas}
           initialErrorMessage={hiba ? ERROR_MESSAGES[hiba] : undefined}
-          paymentUnavailable={fizetes === "nem-elerheto"}
         />
       </div>
     </Section>
