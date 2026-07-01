@@ -29,9 +29,18 @@ kezeléséhez.
    cp .env.example .env
    ```
 
-   Töltsd ki a `DATABASE_URL`-t, és generálj egy `AUTH_SECRET`/`CRON_SECRET`
-   értéket: `openssl rand -base64 32`. A Stripe/SMTP/MailerLite/analitika
-   kulcsok TODO placeholderek — élesítés előtt pótlandók (lásd lent).
+   Töltsd ki a `DATABASE_URL`-t és a `DIRECT_URL`-t (Supabase/PgBouncer
+   esetén a kettő különböző port — lásd `.env.example`), és generálj egy
+   `AUTH_SECRET`/`CRON_SECRET` értéket: `openssl rand -base64 32`. A
+   Stripe/SMTP/MailerLite/analitika kulcsok TODO placeholderek — élesítés
+   előtt pótlandók (lásd lent).
+
+   **Élesben (pl. Vercel)**: a `DATABASE_URL`/`DIRECT_URL` nélkül a build
+   sikeres lesz (lásd lent), de az oldal minden adatbázis-igényes része
+   futásidőben hibázik ("Environment variable not found: DATABASE_URL") —
+   ezeket a Vercel projekt Environment Variables beállításai közé kell
+   felvenni, majd `npx prisma migrate deploy`-t futtatni az éles
+   adatbázison, mielőtt az oldal ténylegesen működne.
 
 4. **Adatbázis migráció + seed**
 

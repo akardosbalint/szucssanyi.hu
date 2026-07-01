@@ -3,8 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Supabase (és más PgBouncer-es hosztingok) esetén a DATABASE_URL a pooled
+  // (tranzakció-módú) kapcsolat, ami migrációhoz nem alkalmas — a migráció a
+  // DIRECT_URL-t használja (közvetlen, nem pooled kapcsolat). Ha nincs
+  // PgBouncer (pl. sima Postgres), a DIRECT_URL ugyanaz lehet, mint a
+  // DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------------------
