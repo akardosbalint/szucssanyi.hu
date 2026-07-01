@@ -70,6 +70,21 @@ kezeléséhez.
    vásárlás form graceful módon jelez (nem hoz létre "árva" fizetésre váró
    rekordot), és a kapcsolat oldalra irányítja a látogatót.
 
+## Admin bejelentkezés (fejlesztői környezet)
+
+A `npm run db:seed` a következő fejlesztői fiókokat hozza létre:
+
+| Szerepkör | E-mail | Jelszó |
+| --- | --- | --- |
+| ADMIN (Sándor) | `sandor@szucssanyi.hu` | `ChangeMe123!` |
+| PRACTITIONER (Veronika) | `veronika@szucssanyi.hu` | `ChangeMe123!` |
+| PRACTITIONER (Andrea) | `andrea@szucssanyi.hu` | `ChangeMe123!` |
+
+Élesítés előtt mindenképp cseréld le ezeket a jelszavakat — jelenleg nincs
+"jelszócsere" felület az admin panelben, ezt a `User.passwordHash` mező
+közvetlen frissítésével (pl. egy kisegítő szkripttel, `bcrypt.hash`
+használatával) vagy a seed script újrafuttatásával lehet megoldani.
+
 ## Élesítés előtt pótlandó integrációk
 
 Ezek a rendszer TODO/placeholder pontjai — kódban is jelölve, itt
@@ -106,3 +121,48 @@ Ezek a rendszer TODO/placeholder pontjai — kódban is jelölve, itt
   egyetlen megbízható forrása (nem a kliens-oldali redirect).
 - `src/lib/` — megosztott logika (Prisma kliens, auth, foglalás/rendelkezésre
   állás számítás, Stripe, e-mail, formázás).
+
+## Ismert korlátok / amit érdemes tudni élesítés előtt
+
+- **Tartalom**: a szakember-fotók, oklevelek, valós vélemények és a "Rólam"
+  oldal hitelesítő adatai jelenleg minta/placeholder tartalmak — ezeket
+  Sanyinak kell valós anyagra cserélnie (admin panel: Szakemberek; kód:
+  `src/app/(public)/rolam/page.tsx`, `src/app/(public)/page.tsx`).
+- **ÁSZF / Adatvédelmi tájékoztató**: általános tervezet, jogi
+  felülvizsgálat nélkül — a `[TODO: ...]` jelölt részeket (cégadatok,
+  dátumok) mindenképp ki kell tölteni, és érdemes ügyvéddel átnézetni.
+- **Jelszókezelés**: nincs "elfelejtett jelszó" / jelszócsere felület az
+  admin panelben — ezt egy következő menetben érdemes hozzáadni, ha
+  szükséges.
+- **Számlázás**: nincs implementálva (a jelen állapot szerint nem
+  prioritás) — ha szükség lenne rá, a `Payment` modellre épülő Számlázz.hu
+  (vagy hasonló) integrációt külön menetben kell megépíteni.
+- **Függőségek**: `npm audit` jelez néhány, jelenleg még javítás nélküli
+  nodemailer sérülékenységet (a `next-auth`/`@auth/core` révén beágyazva).
+  A saját e-mail kódunk (`src/lib/email.ts`) nem használja az érintett
+  funkciókat (jsonTransport, raw option, egyedi envelope/OAuth2), és minden
+  bemenő e-mail címet zod validál — ettől függetlenül érdemes figyelni a
+  nodemailer/next-auth frissítéseit, és lecserélni, amint elérhető javított
+  verzió.
+- **Fejlesztői sandboxban tapasztalt jelenség**: a Turbopack dev szerver
+  perzisztens cache-e (`.next/dev/cache`) néha korruptálódik hosszú
+  fejlesztői munkamenetben — ha ez történik, `rm -rf .next` és újraindítás
+  megoldja. Ez nem érinti a `next build`/`next start` production módot.
+
+## Verifikáció (elvégezve ebben a fejlesztési menetben)
+
+- `npm run lint`, `npm run build`, `npm test` — mind zöld.
+- Böngészős, végponttól végpontig tesztelve (Playwright): teljes foglalási
+  folyamat (szakember → szolgáltatás → naptár → adatok → Stripe-hiány esetén
+  graceful üzenet), foglalás lemondása egyedi linkről, csoportos
+  családállítás jelentkezés + lemondás, kurzusvásárlás form, ingyenes
+  meditáció feliratkozás, kapcsolat form.
+- Admin panel: bejelentkezés, szerepkör-alapú hozzáférés-korlátozás (a
+  szakember nem éri el az admin-only oldalakat), kézi foglalás rögzítése
+  azonnal blokkolja a publikus naptárat (nincs dupla foglalás), elérhetőség-
+  szerkesztés (heti szabály + kivétel) azonnal tükröződik a publikus
+  oldalon, kurzus-tartalom szerkesztés, ügyfél-anonimizálás.
+- SEO: minden publikus oldalon egyedi title/description, egy H1/oldal
+  helyes heading-hierarchiával, `sitemap.xml`/`robots.txt`, Person és
+  LocalBusiness JSON-LD.
+- Konzolhiba-mentes bejárás minden publikus oldalon.
