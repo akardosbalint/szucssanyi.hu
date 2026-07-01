@@ -50,6 +50,26 @@ kezeléséhez.
    npm run dev
    ```
 
+## Stripe teszt módban
+
+1. Hozz létre egy Stripe fiókot (teszt módban ingyenes), és másold ki a
+   *Publishable key* / *Secret key* párost a Dashboard "Developers → API
+   keys" oldaláról a `.env`-be.
+2. Telepítsd a [Stripe CLI](https://docs.stripe.com/stripe-cli)-t, és
+   futtasd helyben a webhookok átirányítását:
+
+   ```bash
+   stripe listen --forward-to localhost:3000/api/webhooks/stripe
+   ```
+
+   A parancs kiír egy `whsec_...` webhook secretet — ezt másold a
+   `STRIPE_WEBHOOK_SECRET` env változóba.
+3. Teszt bankkártya sikeres fizetéshez: `4242 4242 4242 4242`, tetszőleges
+   jövőbeli lejárat és CVC.
+4. Amíg a Stripe kulcsok nincsenek beállítva, a foglalás/jelentkezés/kurzus-
+   vásárlás form graceful módon jelez (nem hoz létre "árva" fizetésre váró
+   rekordot), és a kapcsolat oldalra irányítja a látogatót.
+
 ## Élesítés előtt pótlandó integrációk
 
 Ezek a rendszer TODO/placeholder pontjai — kódban is jelölve, itt
@@ -63,7 +83,7 @@ Ezek a rendszer TODO/placeholder pontjai — kódban is jelölve, itt
 | Google Analytics / Meta Pixel | `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID` | ID-k beillesztése |
 | Social linkek | `NEXT_PUBLIC_FACEBOOK_URL` stb. | Valós URL-ek |
 | Számlázás | — | Nincs implementálva (a döntés szerint jelenleg nem prioritás) |
-| Cron ütemezés | `CRON_SECRET`, `/api/cron/*` | Élesben egy külső ütemező (Vercel Cron / cron-job.org) hívja ezeket rendszeresen |
+| Cron ütemezés | `CRON_SECRET`, `/api/cron/*`, `vercel.json` | Vercelen a `vercel.json` crons szekciója automatikusan ütemezi (Vercel a `CRON_SECRET` env változóból állítja be az Authorization headert); más hosztingnál külső ütemező (pl. cron-job.org) szükséges |
 
 ## Szkriptek
 
