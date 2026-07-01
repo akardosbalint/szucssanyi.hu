@@ -13,6 +13,19 @@ export const metadata: Metadata = {
     "Egyéni konzultáció, csoportos családállítás és önismereti kurzusok Szűcs Sándorral. 2000+ egyéni ülés tapasztalata, valós idejű időpontfoglalással.",
 };
 
+const localBusinessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: "Szűcs Sándor — Holisztikus önismereti mentorálás",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Budapest",
+    addressCountry: "HU",
+  },
+  priceRange: "HUF",
+  areaServed: "HU",
+};
+
 const SERVICES = [
   {
     icon: HeartHandshake,
@@ -172,6 +185,11 @@ export default function HomePage() {
           Foglalj konzultációt
         </Button>
       </Section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
     </>
   );
 }

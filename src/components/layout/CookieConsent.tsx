@@ -9,8 +9,10 @@ export function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    // Külső rendszer (localStorage) szinkronizálása kirendereléskor — nem
+    // props/state-ből származtatott állapot, ezért indokolt az effektben.
     if (!window.localStorage.getItem(STORAGE_KEY)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true);
     }
   }, []);

@@ -1,12 +1,7 @@
 import { PrismaClient, ServiceMode } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
 
 const prisma = new PrismaClient();
-
-function token() {
-  return randomBytes(24).toString("base64url");
-}
 
 async function upsertStaff(params: {
   email: string;
@@ -53,7 +48,7 @@ async function main() {
 
   console.log("Seed: szakemberek...");
 
-  const sandor = await prisma.practitioner.upsert({
+  await prisma.practitioner.upsert({
     where: { slug: "sandor" },
     update: {},
     create: {
@@ -91,7 +86,7 @@ async function main() {
     },
   });
 
-  const veronika = await prisma.practitioner.upsert({
+  await prisma.practitioner.upsert({
     where: { slug: "veronika" },
     update: {},
     create: {
@@ -122,7 +117,7 @@ async function main() {
     },
   });
 
-  const andrea = await prisma.practitioner.upsert({
+  await prisma.practitioner.upsert({
     where: { slug: "andrea" },
     update: {},
     create: {
