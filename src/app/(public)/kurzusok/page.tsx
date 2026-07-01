@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { formatHUF } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
+// Élő adatbázis-adaton (kurzuslista) alapul, ami admin panelből bármikor
+// változhat — ne generálja statikusan build időben.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Kurzusok",
   description:

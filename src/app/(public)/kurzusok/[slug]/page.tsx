@@ -25,11 +25,6 @@ const COURSE_FAQ = [
   },
 ];
 
-export async function generateStaticParams() {
-  const courses = await prisma.course.findMany({ where: { active: true }, select: { slug: true } });
-  return courses.map((c) => ({ slug: c.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: {

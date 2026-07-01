@@ -9,6 +9,10 @@ import { formatHUF } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { HeartCrack, MessagesSquare, ShieldQuestion } from "lucide-react";
 
+// Élő adatbázis-adaton (szakemberek listája) alapul, ami admin panelből
+// bármikor változhat — ne generálja statikusan build időben.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Konzultáció",
   description:
